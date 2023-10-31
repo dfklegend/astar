@@ -23,24 +23,24 @@ type Config struct {
 
 type FnIsBlock func(x, y int) bool
 
-type astar struct {
+type PathFinder struct {
 	config               Config
 	openList, closedList List
 	startNode, endNode   Node
 }
 
-// New creates a new astar instance
-func New(config Config) (*astar, error) {
+// New creates a new PathFinder instance
+func New(config Config) (*PathFinder, error) {
 	if config.GridWidth < 2 || config.GridHeight < 2 {
 		return nil, errors.New("GridWidth and GridHeight must be min 2")
 	}
-	a := &astar{config: config}
+	a := &PathFinder{config: config}
 	return a.init(), nil
 }
 
 // init initialised needed properties
 // internal function
-func (a *astar) init() *astar {
+func (a *PathFinder) init() *PathFinder {
 	// add invalidNodes directly to the closedList
 	a.closedList.Add(a.config.InvalidNodes...)
 	return a
@@ -48,7 +48,7 @@ func (a *astar) init() *astar {
 
 // H caluclates the absolute distance between
 // nodeA and nodeB calculates by the manhattan distance
-func (a *astar) H(nodeA Node, nodeB Node) int {
+func (a *PathFinder) H(nodeA Node, nodeB Node) int {
 	absX := math.Abs(float64(nodeA.X - nodeB.X))
 	absY := math.Abs(float64(nodeA.Y - nodeB.Y))
 	return int(absX + absY)
@@ -56,7 +56,7 @@ func (a *astar) H(nodeA Node, nodeB Node) int {
 
 // GetNeighborNodes calculates the next neighbors of the given node
 // if a neighbor node is not accessible the node will be ignored
-func (a *astar) GetNeighborNodes(node Node) []Node {
+func (a *PathFinder) GetNeighborNodes(node Node) []Node {
 	var neighborNodes []Node
 
 	upNode := Node{X: node.X, Y: node.Y + 1, parent: &node}
@@ -84,7 +84,7 @@ func (a *astar) GetNeighborNodes(node Node) []Node {
 
 // isAccessible checks if the node is reachable in the grid
 // and is not in the invalidNodes slice
-func (a *astar) isAccessible(node Node) bool {
+func (a *PathFinder) isAccessible(node Node) bool {
 
 	// if node is out of bound
 	if node.X < 0 || node.Y < 0 || node.X > a.config.GridWidth-1 || node.Y > a.config.GridHeight-1 {
@@ -108,7 +108,7 @@ func (a *astar) isAccessible(node Node) bool {
 
 // IsEndNode checks if the given node has
 // equal node coordinates with the end node
-func (a *astar) IsEndNode(checkNode, endNode Node) bool {
+func (a *PathFinder) IsEndNode(checkNode, endNode Node) bool {
 	return checkNode.X == endNode.X && checkNode.Y == endNode.Y
 }
 
@@ -116,7 +116,7 @@ func (a *astar) IsEndNode(checkNode, endNode Node) bool {
 // The return value will be the fastest way represented as a nodes slice
 //
 // If no path was found it returns nil and an error
-func (a *astar) FindPath(startNode, endNode Node) ([]Node, error) {
+func (a *PathFinder) FindPath(startNode, endNode Node) ([]Node, error) {
 
 	a.startNode = startNode
 	a.endNode = endNode
@@ -162,7 +162,7 @@ func (a *astar) FindPath(startNode, endNode Node) ([]Node, error) {
 }
 
 // calculateNode calculates the F, G and H value for the given node
-func (a *astar) calculateNode(node *Node) {
+func (a *PathFinder) calculateNode(node *Node) {
 
 	node.g++
 
@@ -179,7 +179,7 @@ func (a *astar) calculateNode(node *Node) {
 
 // getNodePath returns the chain of parent nodes
 // the given node will be still included in the nodes slice
-func (a *astar) getNodePath(currentNode Node) []Node {
+func (a *PathFinder) getNodePath(currentNode Node) []Node {
 	var nodePath []Node
 	nodePath = append(nodePath, currentNode)
 	for {
