@@ -18,7 +18,10 @@ type Config struct {
 	GridWidth, GridHeight int
 	InvalidNodes          []Node
 	WeightedNodes         []Node
+	FnCheck               FnIsBlock
 }
+
+type FnIsBlock func(x, y int) bool
 
 type astar struct {
 	config               Config
@@ -86,6 +89,12 @@ func (a *astar) isAccessible(node Node) bool {
 	// if node is out of bound
 	if node.X < 0 || node.Y < 0 || node.X > a.config.GridWidth-1 || node.Y > a.config.GridHeight-1 {
 		return false
+	}
+
+	if a.config.FnCheck != nil {
+		if a.config.FnCheck(node.X, node.Y) {
+			return false
+		}
 	}
 
 	// check if the node is in the closedList

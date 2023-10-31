@@ -194,6 +194,75 @@ func TestAstar_FindPathA(t *testing.T) {
 	}
 }
 
+func TestAstar_FnCheckFindPathA(t *testing.T) {
+
+	// [P] [P] [P] [P] [ ]   S: StartNode
+	// [P] [O] [ ] [E] [ ]   E: EndNode
+	// [P] [P] [O] [ ] [ ]   O: ObstacleNode
+	// [ ] [S] [ ] [O] [ ]   P: Valid Path
+	// [ ] [ ] [ ] [ ] [ ]
+
+	startNode := Node{X: 1, Y: 1}
+	endNode := Node{X: 3, Y: 3}
+	obstacleNodes := []Node{
+		{X: 1, Y: 3},
+		{X: 2, Y: 2},
+		{X: 3, Y: 1},
+	}
+
+	pathNodesToFind := []Node{
+		{X: 1, Y: 2},
+		{X: 0, Y: 2},
+		{X: 0, Y: 3},
+		{X: 0, Y: 4},
+		{X: 1, Y: 4},
+		{X: 2, Y: 4},
+		{X: 3, Y: 3},
+	}
+
+	pathList := NewList()
+
+	defer func() {
+		pathList.Clear()
+	}()
+
+	pathList.Add(pathNodesToFind...)
+
+	fnCheck := func(x, y int) bool {
+		for _, v := range obstacleNodes {
+			if v.X == x && v.Y == y {
+				return true
+			}
+		}
+		return false
+	}
+
+	// setup a 5x5 grid
+	a, err := New(Config{GridWidth: 5, GridHeight: 5,
+		//InvalidNodes: obstacleNodes,
+		FnCheck: fnCheck})
+	if err != nil {
+		t.Fatal("there should be no error", err)
+	}
+	foundPath, err := a.FindPath(startNode, endNode)
+	if err != nil {
+		t.Error("there should be a path", err)
+	}
+
+	for index, pathNode := range foundPath {
+		if pathList.Contains(pathNode) {
+			pathList.Remove(pathNode)
+		}
+		if index > len(pathNodesToFind) {
+			t.Error("more path nodes found as expected")
+		}
+	}
+
+	if !pathList.IsEmpty() {
+		t.Error("not all expected path nodes found: ", pathList.All())
+	}
+}
+
 func TestAstar_FindPathB(t *testing.T) {
 
 	// [ ] [ ] [ ] [ ] [ ]   S: StartNode
