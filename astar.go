@@ -10,6 +10,10 @@ var (
 	ErrorNoPath = errors.New("no path found")
 )
 
+const (
+	StepsNoLimit = -1
+)
+
 // Config holds important settings
 // to perform the calculation
 //
@@ -37,6 +41,7 @@ type PathFinder struct {
 	config               Config
 	openList, closedList List
 	startNode, endNode   Node
+	steps                int // 评估的步数
 }
 
 // New creates a new PathFinder instance
@@ -131,10 +136,20 @@ func (a *PathFinder) IsEndNode(ctx IContext, checkNode, endNode Node) bool {
 // The return value will be the fastest way represented as a nodes slice
 //
 // If no path was found it returns nil and an error
+
 func (a *PathFinder) FindPath(ctx IContext, startNode, endNode Node) ([]Node, error) {
+	return a.doFindPath(ctx, startNode, endNode, StepsNoLimit)
+}
+
+func (a *PathFinder) FindPathEx(ctx IContext, startNode, endNode Node, maxSteps int) ([]Node, error) {
+	return a.doFindPath(ctx, startNode, endNode, maxSteps)
+}
+
+func (a *PathFinder) doFindPath(ctx IContext, startNode, endNode Node, maxSteps int) ([]Node, error) {
 
 	a.startNode = startNode
 	a.endNode = endNode
+	a.steps = 0
 
 	defer func() {
 		a.openList.Clear()
@@ -152,9 +167,16 @@ func (a *PathFinder) FindPath(ctx IContext, startNode, endNode Node) ([]Node, er
 
 		a.openList.Remove(currentNode)
 		a.closedList.Add(currentNode)
+		a.steps++
 
 		// we found the path
 		if a.IsEndNode(ctx, currentNode, endNode) {
+			return a.getNodePath(currentNode), nil
+		}
+
+		if maxSteps > 0 && a.steps >= maxSteps {
+			// 最大探测节点数
+			// 直接返回当前路径
 			return a.getNodePath(currentNode), nil
 		}
 

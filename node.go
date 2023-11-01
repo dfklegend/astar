@@ -10,7 +10,9 @@ import "fmt"
 // With the Weighting value you can set the nodes heavy grade
 // so a node with mud or water are heavier as gras or street
 type Node struct {
-	f, g, h   int
+	f         int // g + h
+	g         int // 节点层次
+	h         int // 和目标点评估距离
 	X, Y      int
 	Weighting int
 	parent    *Node

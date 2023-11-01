@@ -324,6 +324,62 @@ func TestAstar_ContextFindPathA(t *testing.T) {
 	}
 }
 
+func TestAstar_ContextFindPathAMaxStep(t *testing.T) {
+
+	// [P] [P] [P] [P] [ ]   S: StartNode
+	// [P] [O] [ ] [E] [ ]   E: EndNode
+	// [P] [P] [O] [ ] [ ]   O: ObstacleNode
+	// [ ] [S] [ ] [O] [ ]   P: Valid Path
+	// [ ] [ ] [ ] [ ] [ ]
+
+	startNode := Node{X: 1, Y: 1}
+	endNode := Node{X: 3, Y: 3}
+	obstacleNodes := []Node{
+		{X: 1, Y: 3},
+		{X: 2, Y: 2},
+		{X: 3, Y: 1},
+	}
+
+	pathNodesToFind := []Node{
+		{X: 1, Y: 2},
+		{X: 0, Y: 2},
+		{X: 0, Y: 3},
+		{X: 0, Y: 4},
+		{X: 1, Y: 4},
+		{X: 2, Y: 4},
+		{X: 3, Y: 3},
+	}
+
+	pathList := NewList()
+
+	defer func() {
+		pathList.Clear()
+	}()
+
+	pathList.Add(pathNodesToFind...)
+	ctx := newContext(3, 3, 0, obstacleNodes)
+
+	// setup a 5x5 grid
+	a, err := New(Config{GridWidth: 5, GridHeight: 5})
+	if err != nil {
+		t.Fatal("there should be no error", err)
+	}
+	// 将提前跳出
+	foundPath, err := a.FindPathEx(ctx, startNode, endNode, 5)
+	if err != nil {
+		t.Error("there should be a path", err)
+	}
+
+	for index, pathNode := range foundPath {
+		if pathList.Contains(pathNode) {
+			pathList.Remove(pathNode)
+		}
+		if index > len(pathNodesToFind) {
+			t.Error("more path nodes found as expected")
+		}
+	}
+}
+
 func TestAstar_FindPathB(t *testing.T) {
 
 	// [ ] [ ] [ ] [ ] [ ]   S: StartNode
