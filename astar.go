@@ -6,6 +6,10 @@ import (
 	"math"
 )
 
+var (
+	ErrorNoPath = errors.New("no path found")
+)
+
 // Config holds important settings
 // to perform the calculation
 //
@@ -18,10 +22,16 @@ type Config struct {
 	GridWidth, GridHeight int
 	InvalidNodes          []Node
 	WeightedNodes         []Node
-	FnCheck               FnIsBlock
+}
+
+// IContext 提供一些寻路的信息
+type IContext interface {
+	IsInBlock(x, y int) bool
+	IsReachTar(x, y int) bool
 }
 
 type FnIsBlock func(x, y int) bool
+type FnIsReachTar func(x, y int) bool
 
 type PathFinder struct {
 	config               Config
@@ -56,26 +66,26 @@ func (a *PathFinder) H(nodeA Node, nodeB Node) int {
 
 // GetNeighborNodes calculates the next neighbors of the given node
 // if a neighbor node is not accessible the node will be ignored
-func (a *PathFinder) GetNeighborNodes(node Node) []Node {
+func (a *PathFinder) GetNeighborNodes(ctx IContext, node Node) []Node {
 	var neighborNodes []Node
 
 	upNode := Node{X: node.X, Y: node.Y + 1, parent: &node}
-	if a.isAccessible(upNode) {
+	if a.isAccessible(ctx, upNode) {
 		neighborNodes = append(neighborNodes, upNode)
 	}
 
 	downNode := Node{X: node.X, Y: node.Y - 1, parent: &node}
-	if a.isAccessible(downNode) {
+	if a.isAccessible(ctx, downNode) {
 		neighborNodes = append(neighborNodes, downNode)
 	}
 
 	leftNode := Node{X: node.X - 1, Y: node.Y, parent: &node}
-	if a.isAccessible(leftNode) {
+	if a.isAccessible(ctx, leftNode) {
 		neighborNodes = append(neighborNodes, leftNode)
 	}
 
 	rightNode := Node{X: node.X + 1, Y: node.Y, parent: &node}
-	if a.isAccessible(rightNode) {
+	if a.isAccessible(ctx, rightNode) {
 		neighborNodes = append(neighborNodes, rightNode)
 	}
 
@@ -84,15 +94,15 @@ func (a *PathFinder) GetNeighborNodes(node Node) []Node {
 
 // isAccessible checks if the node is reachable in the grid
 // and is not in the invalidNodes slice
-func (a *PathFinder) isAccessible(node Node) bool {
+func (a *PathFinder) isAccessible(ctx IContext, node Node) bool {
 
 	// if node is out of bound
 	if node.X < 0 || node.Y < 0 || node.X > a.config.GridWidth-1 || node.Y > a.config.GridHeight-1 {
 		return false
 	}
 
-	if a.config.FnCheck != nil {
-		if a.config.FnCheck(node.X, node.Y) {
+	if ctx != nil {
+		if ctx.IsInBlock(node.X, node.Y) {
 			return false
 		}
 	}
@@ -108,7 +118,12 @@ func (a *PathFinder) isAccessible(node Node) bool {
 
 // IsEndNode checks if the given node has
 // equal node coordinates with the end node
-func (a *PathFinder) IsEndNode(checkNode, endNode Node) bool {
+func (a *PathFinder) IsEndNode(ctx IContext, checkNode, endNode Node) bool {
+	if ctx != nil {
+		if ctx.IsReachTar(checkNode.X, checkNode.Y) {
+			return true
+		}
+	}
 	return checkNode.X == endNode.X && checkNode.Y == endNode.Y
 }
 
@@ -116,7 +131,7 @@ func (a *PathFinder) IsEndNode(checkNode, endNode Node) bool {
 // The return value will be the fastest way represented as a nodes slice
 //
 // If no path was found it returns nil and an error
-func (a *PathFinder) FindPath(startNode, endNode Node) ([]Node, error) {
+func (a *PathFinder) FindPath(ctx IContext, startNode, endNode Node) ([]Node, error) {
 
 	a.startNode = startNode
 	a.endNode = endNode
@@ -139,11 +154,11 @@ func (a *PathFinder) FindPath(startNode, endNode Node) ([]Node, error) {
 		a.closedList.Add(currentNode)
 
 		// we found the path
-		if a.IsEndNode(currentNode, endNode) {
+		if a.IsEndNode(ctx, currentNode, endNode) {
 			return a.getNodePath(currentNode), nil
 		}
 
-		neighbors := a.GetNeighborNodes(currentNode)
+		neighbors := a.GetNeighborNodes(ctx, currentNode)
 		for _, neighbor := range neighbors {
 			if a.closedList.Contains(neighbor) {
 				continue
@@ -158,7 +173,7 @@ func (a *PathFinder) FindPath(startNode, endNode Node) ([]Node, error) {
 
 	}
 
-	return nil, errors.New("No path found")
+	return nil, ErrorNoPath
 }
 
 // calculateNode calculates the F, G and H value for the given node

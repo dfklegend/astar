@@ -74,7 +74,7 @@ func TestGetNeighborNodes(t *testing.T) {
 	wantList.Add(validNeighbors...)
 	invalidList.Add(invalidNeighbors...)
 
-	for index, neighbor := range a.GetNeighborNodes(node) {
+	for index, neighbor := range a.GetNeighborNodes(nil, node) {
 		if wantList.Contains(neighbor) {
 			wantList.Remove(neighbor)
 		}
@@ -122,7 +122,7 @@ func TestGetNeighborNodesWithInvalidNodes(t *testing.T) {
 		t.Fatal("there should be no error", err)
 	}
 
-	for index, neighbor := range a.GetNeighborNodes(node) {
+	for index, neighbor := range a.GetNeighborNodes(nil, node) {
 		if wantList.Contains(neighbor) {
 			wantList.Remove(neighbor)
 		}
@@ -175,7 +175,7 @@ func TestAstar_FindPathA(t *testing.T) {
 	if err != nil {
 		t.Fatal("there should be no error", err)
 	}
-	foundPath, err := a.FindPath(startNode, endNode)
+	foundPath, err := a.FindPath(nil, startNode, endNode)
 	if err != nil {
 		t.Error("there should be a path", err)
 	}
@@ -194,7 +194,46 @@ func TestAstar_FindPathA(t *testing.T) {
 	}
 }
 
-func TestAstar_FnCheckFindPathA(t *testing.T) {
+type TestContext struct {
+	tarX     int
+	tarY     int
+	nearDist int
+	blocks   []Node
+}
+
+func newContext(tarX, tarY, nearDist int, blocks []Node) IContext {
+	return &TestContext{
+		tarX:     tarX,
+		tarY:     tarY,
+		blocks:   blocks,
+		nearDist: nearDist,
+	}
+}
+
+func (c *TestContext) IsInBlock(x, y int) bool {
+	for _, v := range c.blocks {
+		if v.X == x && v.Y == y {
+			return true
+		}
+	}
+	return false
+}
+
+func (c *TestContext) IsReachTar(x, y int) bool {
+	if AbsI(x-c.tarX)+AbsI(y-c.tarY) <= c.nearDist {
+		return true
+	}
+	return false
+}
+
+func AbsI(v int) int {
+	if v < 0 {
+		return -v
+	}
+	return v
+}
+
+func TestAstar_ContextFindPathA(t *testing.T) {
 
 	// [P] [P] [P] [P] [ ]   S: StartNode
 	// [P] [O] [ ] [E] [ ]   E: EndNode
@@ -220,6 +259,15 @@ func TestAstar_FnCheckFindPathA(t *testing.T) {
 		{X: 3, Y: 3},
 	}
 
+	pathNodesToFindNear := []Node{
+		{X: 1, Y: 2},
+		{X: 0, Y: 2},
+		{X: 0, Y: 3},
+		{X: 0, Y: 4},
+		{X: 1, Y: 4},
+		{X: 2, Y: 4},
+	}
+
 	pathList := NewList()
 
 	defer func() {
@@ -227,24 +275,14 @@ func TestAstar_FnCheckFindPathA(t *testing.T) {
 	}()
 
 	pathList.Add(pathNodesToFind...)
-
-	fnCheck := func(x, y int) bool {
-		for _, v := range obstacleNodes {
-			if v.X == x && v.Y == y {
-				return true
-			}
-		}
-		return false
-	}
+	ctx := newContext(3, 3, 0, obstacleNodes)
 
 	// setup a 5x5 grid
-	a, err := New(Config{GridWidth: 5, GridHeight: 5,
-		//InvalidNodes: obstacleNodes,
-		FnCheck: fnCheck})
+	a, err := New(Config{GridWidth: 5, GridHeight: 5})
 	if err != nil {
 		t.Fatal("there should be no error", err)
 	}
-	foundPath, err := a.FindPath(startNode, endNode)
+	foundPath, err := a.FindPath(ctx, startNode, endNode)
 	if err != nil {
 		t.Error("there should be a path", err)
 	}
@@ -258,6 +296,29 @@ func TestAstar_FnCheckFindPathA(t *testing.T) {
 		}
 	}
 
+	if !pathList.IsEmpty() {
+		t.Error("not all expected path nodes found: ", pathList.All())
+	}
+
+	// test again
+	// nearDist is 1
+	pathList.Add(pathNodesToFindNear...)
+	ctx = newContext(3, 3, 1, obstacleNodes)
+	foundPath, err = a.FindPath(ctx, startNode, endNode)
+	if err != nil {
+		t.Error("there should be a path", err)
+	}
+
+	for index, pathNode := range foundPath {
+		if pathList.Contains(pathNode) {
+			pathList.Remove(pathNode)
+		}
+		if index > len(pathNodesToFind) {
+			t.Error("more path nodes found as expected")
+		}
+	}
+
+	//
 	if !pathList.IsEmpty() {
 		t.Error("not all expected path nodes found: ", pathList.All())
 	}
@@ -299,7 +360,7 @@ func TestAstar_FindPathB(t *testing.T) {
 	if err != nil {
 		t.Fatal("there should be no error", err)
 	}
-	foundPath, err := a.FindPath(startNode, endNode)
+	foundPath, err := a.FindPath(nil, startNode, endNode)
 	if err != nil {
 		t.Error("there should be a path", err)
 	}
@@ -357,7 +418,7 @@ func TestAstar_FindPathC(t *testing.T) {
 	if err != nil {
 		t.Fatal("there should be no error", err)
 	}
-	foundPath, err := a.FindPath(startNode, endNode)
+	foundPath, err := a.FindPath(nil, startNode, endNode)
 	if err != nil {
 		t.Error("there should be a path", err)
 	}
@@ -405,7 +466,7 @@ func TestAstar_FindPathNoPath(t *testing.T) {
 	if err != nil {
 		t.Fatal("there should be no error", err)
 	}
-	foundPath, err := a.FindPath(startNode, endNode)
+	foundPath, err := a.FindPath(nil, startNode, endNode)
 	if err == nil {
 		t.Error("there should be no path", err)
 	}
