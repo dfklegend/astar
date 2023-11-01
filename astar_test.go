@@ -219,7 +219,7 @@ func (c *TestContext) IsInBlock(x, y int) bool {
 	return false
 }
 
-func (c *TestContext) IsReachTar(x, y int) bool {
+func (c *TestContext) IsNearEnough(x, y int) bool {
 	if AbsI(x-c.tarX)+AbsI(y-c.tarY) <= c.nearDist {
 		return true
 	}

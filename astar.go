@@ -27,7 +27,7 @@ type Config struct {
 // IContext 提供一些寻路的信息
 type IContext interface {
 	IsInBlock(x, y int) bool
-	IsReachTar(x, y int) bool
+	IsNearEnough(x, y int) bool
 }
 
 type FnIsBlock func(x, y int) bool
@@ -120,7 +120,7 @@ func (a *PathFinder) isAccessible(ctx IContext, node Node) bool {
 // equal node coordinates with the end node
 func (a *PathFinder) IsEndNode(ctx IContext, checkNode, endNode Node) bool {
 	if ctx != nil {
-		if ctx.IsReachTar(checkNode.X, checkNode.Y) {
+		if ctx.IsNearEnough(checkNode.X, checkNode.Y) {
 			return true
 		}
 	}
